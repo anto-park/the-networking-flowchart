@@ -12,6 +12,8 @@ Thanks for reading and let me know if there are any issues,
 
 Anto
 
+---
+
 Direct Link:
 
 https://anto-park.github.io/the-networking-flowchart/
