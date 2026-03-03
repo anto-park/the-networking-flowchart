@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Networking Flowchart</title>
+<style>
+body {
+  font-family: 'Courier New', Courier, monospace;
+  background: #e8e8e0;
+  color: #222;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 20px;
+  margin: 0;
+}
+
+h1 {
+  font-size: 1.3em;
+  text-align: center;
+  margin: 0 0 2px 0;
+}
+
+p.sub {
+  text-align: center;
+  font-size: 0.85em;
+  color: #555;
+  margin: 0 0 10px 0;
+}
+
+p.intro {
+  max-width: 500px;
+  margin: 16px auto;
+  line-height: 1.6;
+  text-align: center;
+}
+
+#box {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+/* Nodes */
+.node {
+  border: 2px solid #999;
+  padding: 8px;
+  margin-bottom: 4px;
+  background: #f4f4ee;
+  font-size: 0.92em;
+}
+
+.child {
+  margin-left: 20px;
+  border-left: 2px solid #999;
+}
+
+/* Active question: yellow */
+.q-active {
+  border-color: #000;
+  background: #ffffcc;
+}
+
+/* Done question: green */
+.q-done {
+  border-color: #000;
+  background: #d4edda;
+  cursor: pointer;
+}
+
+/* Off path: faded */
+.q-off {
+  opacity: 0.3;
+}
+
+/* Active endpoint: orange */
+.e-active {
+  border-color: #000;
+  background: #ffe0b2;
+}
+
+/* Modifier box */
+.mod-active {
+  border: 2px dashed #000;
+  background: #fff8dc;
+  padding: 8px;
+  margin-bottom: 4px;
+  font-size: 0.92em;
+}
+
+.mod-off {
+  border: 2px dashed #999;
+  background: #f0f0e0;
+  padding: 8px;
+  margin-bottom: 4px;
+  font-size: 0.92em;
+  opacity: 0.3;
+}
+
+/* Context tip under questions */
+.ctx {
+  font-size: 0.85em;
+  color: #555;
+  margin: 4px 0;
+}
+
+/* Buttons */
+button.opt {
+  font-family: 'Courier New', Courier, monospace;
+  padding: 4px 12px;
+  margin: 4px 4px 0 0;
+  cursor: pointer;
+  background: #ddd;
+  border: 2px outset #eee;
+  font-size: 0.92em;
+}
+
+button.opt:hover {
+  background: #ccc;
+}
+
+button.opt:active {
+  border-style: inset;
+}
+
+.picked {
+  background: #666;
+  color: #fff;
+  border: 2px solid #333;
+  cursor: default;
+}
+
+.goback {
+  font-size: 0.75em;
+  color: #555;
+  margin-top: 2px;
+}
+
+.center {
+  text-align: center;
+  margin: 16px 0;
+}
+
+button.big {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.1em;
+  padding: 10px 40px;
+  cursor: pointer;
+  background: #c0c0c0;
+  border: 3px outset #ddd;
+  margin-top: 20px;
+}
+
+button.big:hover {
+  background: #b0b0a8;
+}
+
+button.big:active {
+  border-style: inset;
+}
+
+button.nav {
+  font-family: 'Courier New', Courier, monospace;
+  padding: 4px 12px;
+  cursor: pointer;
+  background: #c0c0c0;
+  border: 2px outset #ddd;
+}
+
+button.nav:hover {
+  background: #b0b0a8;
+}
+
+button.nav:active {
+  border-style: inset;
+}
+</style>
+</head>
+<body>
+
+<h1>The Networking Flowchart</h1>
+<p class="sub">An Interactive Guide to "Networking" / by Anto Park</p>
+<div id="box"></div>
+
+<script>
+// ============================================================
+// REFERENCE: B = the single output div. Every function writes
+// to B.innerHTML with a complete HTML string for that state.
+// ============================================================
+var B = document.getElementById("box");
+
+// Track which modifier is active (null, "m15", or "m16")
+var activeMod = null;
+
+// Track company size origin for question 9 routing
+// "large", "mid", "small"
+var companySize = null;
+
+
+// ============================================================
+// HELPER: scroll to active node after render
+// ============================================================
+function scrollToActive() {
+  setTimeout(function() {
+    var el = document.querySelector('.q-active') || document.querySelector('.e-active');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 50);
+}
+
+
+// ============================================================
+// HELPER: modifier HTML
+// ============================================================
+function modBox() {
+  var m15 = "";
+  var m16 = "";
+  if (activeMod === "m15") {
+    m15 = '<div class="mod-active"><b>Modifier: LinkedIn Feed</b><br>You found this job because someone at the company posted about it. Before anything else: you can comment thoughtfully on the post (do not just write "Interested!") or leave a like, then send a personalized connection request to the poster referencing the post. Then proceed with the recommendation below.</div>';
+    m16 = '<div class="mod-off">Modifier: Event</div>';
+  } else if (activeMod === "m16") {
+    m15 = '<div class="mod-off">Modifier: LinkedIn Feed</div>';
+    m16 = '<div class="mod-active"><b>Modifier: Event</b><br>You found this job at a career fair, networking event, or in person. Send a personalized follow up within 24 to 48 hours referencing something specific from your conversation. Connect on LinkedIn immediately. Then proceed with the recommendation below.</div>';
+  } else {
+    m15 = '<div class="mod-off">Modifier: LinkedIn Feed</div>';
+    m16 = '<div class="mod-off">Modifier: Event</div>';
+  }
+  return m15 + m16;
+}
+
+function modBoxOff() {
+  return '<div class="mod-off">Modifier: LinkedIn Feed</div><div class="mod-off">Modifier: Event</div>';
+}
+
+
+// ============================================================
+// HELPER: off-path tree segments (collapsed, faded)
+// ============================================================
+
+// The full "no job" path, faded
+function offPathB() {
+  return '<div class="node q-off">Q30: Is there a specific company you are interested in?</div>'
+    + '<div class="child">'
+    + '<div class="node q-off">Q31: When would you like to work at this company?</div>'
+    + '<div class="child">'
+    + '<div class="node q-off">Q32: What is the company size?</div>'
+    + '<div class="child"><div class="node q-off">END X</div><div class="node q-off">END Y</div><div class="node q-off">END Z</div></div>'
+    + '<div class="node q-off">Q35: What is the company size?</div>'
+    + '<div class="child"><div class="node q-off">END AA</div><div class="node q-off">END BB</div><div class="node q-off">END CC</div></div>'
+    + '</div>'
+    + '<div class="node q-off">Q40: What kind of networking are you looking for?</div>'
+    + '<div class="child"><div class="node q-off">END DD</div><div class="node q-off">END EE</div><div class="node q-off">END FF</div><div class="node q-off">END GG</div><div class="node q-off">END HH</div></div>'
+    + '</div>';
+}
+
+// The full "job" path, faded
+function offPathA() {
+  return '<div class="node q-off">Q4: How did you find this job posting?</div>'
+    + '<div class="child">'
+    + modBoxOff()
+    + '<div class="node q-off">END C</div>'
+    + '<div class="node q-off">Q5: What is the company size?</div>'
+    + '<div class="child">'
+    + offLargeCompany()
+    + offMidCompany()
+    + offSmallCompany()
+    + '</div>'
+    + '</div>';
+}
+
+function offLargeCompany() {
+  return '<div class="node q-off">Q6: Do you know anyone at this large company?</div>'
+    + '<div class="child">'
+    + offWarmBranch()
+    + offColdLarge()
+    + '</div>';
+}
+
+function offMidCompany() {
+  return '<div class="node q-off">Q7: Do you know anyone at this mid sized company?</div>'
+    + '<div class="child">'
+    + offWarmBranch()
+    + offColdMid()
+    + '</div>';
+}
+
+function offSmallCompany() {
+  return '<div class="node q-off">Q8: Do you know anyone at this small company?</div>'
+    + '<div class="child">'
+    + offWarmBranch()
+    + offColdSmall()
+    + '</div>';
+}
+
+function offWarmBranch() {
+  return '<div class="node q-off">Q9: Are you on good terms with this person?</div>'
+    + '<div class="child">'
+    + '<div class="node q-off">Q10: Can you get a referral within 1 to 2 days?</div>'
+    + '<div class="child">'
+    + '<div class="node q-off">END D</div>'
+    + '<div class="node q-off">Q11: How recently was the job posted?</div>'
+    + '<div class="child"><div class="node q-off">END E</div><div class="node q-off">END F</div></div>'
+    + '</div>'
+    + '</div>';
+}
+
+function offColdLarge() {
+  return '<div class="node q-off">Q12: Who do you want to reach out to? (Large)</div>'
+    + '<div class="child">'
+    + offRecruiterBranch()
+    + '<div class="node q-off">END G</div>'
+    + '<div class="node q-off">END H</div>'
+    + '<div class="node q-off">END I</div>'
+    + '<div class="node q-off">END J</div>'
+    + '</div>';
+}
+
+function offColdMid() {
+  return '<div class="node q-off">Q13: Who do you want to reach out to? (Mid sized)</div>'
+    + '<div class="child">'
+    + offRecruiterBranch()
+    + '<div class="node q-off">END K</div>'
+    + '<div class="node q-off">END L</div>'
+    + '<div class="node q-off">END M</div>'
+    + '<div class="node q-off">END N</div>'
+    + '</div>';
+}
+
+function offColdSmall() {
+  return '<div class="node q-off">Q14: Who do you want to reach out to? (Small)</div>'
+    + '<div class="child">'
+    + '<div class="node q-off">END O</div>'
+    + '<div class="node q-off">END P</div>'
+    + '<div class="node q-off">END Q</div>'
+    + '</div>';
+}
+
+function offRecruiterBranch() {
+  return '<div class="node q-off">Q17: What kind of role are you looking for?</div>'
+    + '<div class="child">'
+    + '<div class="node q-off">Q18: Recruiter commonality?</div>'
+    + '<div class="child">'
+    + '<div class="node q-off">END R</div>'
+    + '<div class="node q-off">END S</div>'
+    + '<div class="node q-off">Q19: Is this recruiter active on LinkedIn?</div>'
+    + '<div class="child"><div class="node q-off">END U</div><div class="node q-off">END V</div><div class="node q-off">END W</div></div>'
+    + '<div class="node q-off">END T</div>'
+    + '</div>'
+    + '</div>';
+}
+
+
+// ============================================================
+// HELPER: "done" node HTML
+// ============================================================
+function doneNode(label, text, gobackFn) {
+  return '<div class="node q-done" onclick="' + gobackFn + '"><b>' + label + ': ' + text + '</b><div class="goback">click to go back</div></div>';
+}
+
+function doneNodeWithChoice(label, text, choiceLabel, gobackFn) {
+  return '<div class="node q-done" onclick="' + gobackFn + '"><b>' + label + ': ' + text + '</b><br><button class="opt picked">' + choiceLabel + '</button><div class="goback">click to go back</div></div>';
+}
+
+
+// ============================================================
+// HELPER: "active" question node HTML
+// ============================================================
+function activeNode(label, text, buttons) {
+  return '<div class="node q-active"><b>' + label + ': ' + text + '</b><br>' + buttons + '</div>';
+}
+
+function activeNodeWithCtx(label, text, ctx, buttons) {
+  return '<div class="node q-active"><b>' + label + ': ' + text + '</b><div class="ctx">' + ctx + '</div>' + buttons + '</div>';
+}
+
+
+// ============================================================
+// HELPER: "end" node HTML
+// ============================================================
+function endNodeActive(label, title, body) {
+  return '<div class="node e-active"><b>' + label + ': ' + title + '</b><br>' + body + '</div>';
+}
+
+function endNodeOff(label) {
+  return '<div class="node q-off">' + label + '</div>';
+}
+
+
+// ============================================================
+// HELPER: Start Over button
+// ============================================================
+function startOverBtn() {
+  return '<div class="center"><button class="nav" onclick="showBegin()">Start Over</button></div>';
+}
+
+
+// ============================================================
+// HELPER: company size utilities
+// ============================================================
+function afterCompanyClose(size) {
+  if (size === "large") return offMidCompany() + offSmallCompany();
+  if (size === "mid") return offSmallCompany();
+  return "";
+}
+
+function beforeCompany(size) {
+  if (size === "large") return "";
+  if (size === "mid") return offLargeCompany();
+  return offLargeCompany() + offMidCompany();
+}
+
+function sizeLabel(size) {
+  if (size === "large") return "Large (1,000+)";
+  if (size === "mid") return "Mid sized (100 to 999)";
+  return "Small or startup (under 100)";
+}
+
+function sizeQNum(size) {
+  if (size === "large") return "Q6";
+  if (size === "mid") return "Q7";
+  return "Q8";
+}
+
+function sizeQText(size) {
+  if (size === "large") return "Do you know anyone who works at this large company?";
+  if (size === "mid") return "Do you know anyone who works at this mid sized company?";
+  return "Do you know anyone who works at this small company?";
+}
+
+function sizeGoback(size) {
+  if (size === "large") return "showQ6()";
+  if (size === "mid") return "showQ7()";
+  return "showQ8()";
+}
+
+function coldOff(size) {
+  if (size === "large") return offColdLarge();
+  if (size === "mid") return offColdMid();
+  return offColdSmall();
+}
+
+function coldEndOffs(size) {
+  if (size === "large") return endNodeOff("END G") + endNodeOff("END H") + endNodeOff("END I") + endNodeOff("END J");
+  if (size === "mid") return endNodeOff("END K") + endNodeOff("END L") + endNodeOff("END M") + endNodeOff("END N");
+  return endNodeOff("END O") + endNodeOff("END P") + endNodeOff("END Q");
+}
+
+function coldParentLabel(size) {
+  if (size === "large") return "Q12";
+  return "Q13";
+}
+
+function coldParentText(size) {
+  if (size === "large") return "At a large company, who do you want to reach out to?";
+  return "At a mid sized company, who do you want to reach out to?";
+}
+
+function coldParentGoback(size) {
+  if (size === "large") return "showQ12()";
+  return "showQ13()";
+}
+
+
+// ============================================================
+// BEGIN SCREEN
+// ============================================================
+function showBegin() {
+  activeMod = null;
+  companySize = null;
+  B.innerHTML = '<p class="intro">Networking is one of the most effective ways to job search, especially when your on paper experience does not neatly line up with the job you want. This interactive flowchart walks you through a series of questions and gives you a specific networking strategy based on your situation.</p>'
+    + '<p class="intro">The entire flowchart is visible so you can see all possible paths. Your path will be highlighted as you go. Click any completed question to go back.</p>'
+    + '<div class="center"><button class="big" onclick="showQ1()">Begin</button></div>';
+}
+
+
+// ============================================================
+// Q1: Do you have an updated resume?
+// ============================================================
+function showQ1() {
+  activeMod = null;
+  companySize = null;
+  var btns = '<button class="opt" onclick="q1_yes()">Yes</button>'
+    + '<button class="opt" onclick="q1_no()">No</button>';
+
+  B.innerHTML = activeNode("Q1", "Do you have an updated resume?", btns)
+    + '<div class="child">'
+    + endNodeOff("END A: Update Your Resume First")
+    + '<div class="node q-off">Q2: Do you have a LinkedIn account?</div>'
+    + '<div class="child">'
+    + endNodeOff("END B: Create a LinkedIn Profile First")
+    + '<div class="node q-off">Q3: Is there a specific open job you are interested in?</div>'
+    + '<div class="child">'
+    + offPathA()
+    + offPathB()
+    + '</div>'
+    + '</div>'
+    + '</div>';
+  scrollToActive();
+}
+
+function q1_no() {
+  B.innerHTML = doneNodeWithChoice("Q1", "Do you have an updated resume?", "No", "showQ1()")
+    + '<div class="child">'
+    + endNodeActive("END A", "Update Your Resume First", "You need an updated resume before networking. It doesn't need to be perfect, but many networking conversations end with &quot;send me your resume&quot; and you need to be ready for that. Get it to a decent state first, then come back.")
+    + '<div class="node q-off">Q2: Do you have a LinkedIn account?</div>'
+    + '<div class="child">'
+    + endNodeOff("END B: Create a LinkedIn Profile First")
+    + '<div class="node q-off">Q3: Is there a specific open job you are interested in?</div>'
+    + '<div class="child">' + offPathA() + offPathB() + '</div>'
+    + '</div>'
+    + '</div>'
+    + startOverBtn();
+  scrollToActive();
+}
+
+function q1_yes() {
+  showQ2();
+}
+
+
+// ============================================================
+// Q2: Do you have a LinkedIn account?
+// ============================================================
+function showQ2() {
+  var btns = '<button class="opt" onclick="q2_yes()">Yes</button>'
+    + '<button class="opt" onclick="q2_no()">No</button>';
+
+  B.innerHTML = doneNodeWithChoice("Q1", "Do you have an updated resume?", "Yes", "showQ1()")
+    + '<div class="child">'
+    + endNodeOff("END A: Update Your Resume First")
+    + activeNode("Q2", "Do you have a LinkedIn account?", btns)
+    + '<div class="child">'
+    + endNodeOff("END B: Create a LinkedIn Profile First")
+    + '<div class="node q-off">Q3: Is there a specific open job you are interested in?</div>'
+    + '<div class="child">' + offPathA() + offPathB() + '</div>'
+    + '</div>'
+    + '</div>';
+  scrollToActive();
+}
+
+function q2_no() {
+  B.innerHTML = doneNodeWithChoice("Q1", "Do you have an updated resume?", "Yes", "showQ1()")
+    + '<div class="child">'
+    + endNodeOff("END A: Update Your Resume First")
+    + doneNodeWithChoice("Q2", "Do you have a LinkedIn account?", "No", "showQ2()")
+    + '<div class="child">'
+    + endNodeActive("END B", "Create a LinkedIn Profile First", "Create a LinkedIn profile before you start networking. You need at minimum: your name, a photo, a headline, and your basic experience. LinkedIn is the primary platform where professional networking happens. Set one up, then come back.")
+    + '<div class="node q-off">Q3: Is there a specific open job you are interested in?</div>'
+    + '<div class="child">' + offPathA() + offPathB() + '</div>'
+    + '</div>'
+    + '</div>'
+    + startOverBtn();
+  scrollToActive();
+}
+
+function q2_yes() {
+  showQ3();
+}
+
+
+// ============================================================
+// Q3: Is there a specific open job?
+// ============================================================
+function showQ3() {
+  var btns = '<button class="opt" onclick="q3_yes()">Yes</button>'
+    + '<button class="opt" onclick="q3_no()">No</button>';
+
+  B.innerHTML = doneNodeWithChoice("Q1", "Do you have an updated resume?", "Yes", "showQ1()")
+    + '<div class="child">'
+    + endNodeOff("END A: Update Your Resume First")
+    + doneNodeWithChoice("Q2", "Do you have a LinkedIn account?", "Yes", "showQ2()")
+    + '<div class="child">'
+    + endNodeOff("END B: Create a LinkedIn Profile First")
+    + activeNode("Q3", "Is there a specific open job you are interested in?", btns)
+    + '<div class="child">' + offPathA() + offPathB() + '</div>'
+    + '</div>'
+    + '</div>';
+  scrollToActive();
+}
+
+function q3_yes() {
+  showQ4();
+}
+
+function q3_no() {
+  showQ30();
+}
+
+
+// ============================================================
+// HELPER: top of tree (Q1 done, Q2 done, Q3 done with choice)
+// ============================================================
+function treeTop(q3choice, q3goback) {
+  return doneNodeWithChoice("Q1", "Do you have an updated resume?", "Yes", "showQ1()")
+    + '<div class="child">'
+    + endNodeOff("END A: Update Your Resume First")
+    + doneNodeWithChoice("Q2", "Do you have a LinkedIn account?", "Yes", "showQ2()")
+    + '<div class="child">'
+    + endNodeOff("END B: Create a LinkedIn Profile First")
+    + doneNodeWithChoice("Q3", "Is there a specific open job you are interested in?", q3choice, q3goback);
+}
+
+function treeTopClose() {
+  return '</div></div>';
+}
+
+
+// ============================================================
+// Q4: How did you find this job posting?
+// ============================================================
+function showQ4() {
+  var btns = '<button class="opt" onclick="q4_linkedin()">LinkedIn Job Board</button>'
+    + '<button class="opt" onclick="q4_feed()">LinkedIn Feed (someone posted)</button>'
+    + '<button class="opt" onclick="q4_other()">Other Job Board</button>'
+    + '<button class="opt" onclick="q4_event()">Career Fair, Event, or In Person</button>'
+    + '<button class="opt" onclick="q4_recruiter()">A recruiter messaged me</button>';
+
+  B.innerHTML = treeTop("Yes", "showQ3()")
+    + '<div class="child">'
+    + activeNode("Q4", "How did you find this job posting?", btns)
+    + '<div class="child">'
+    + modBoxOff()
+    + endNodeOff("END C: A Recruiter Messaged You")
+    + '<div class="node q-off">Q5: What is the company size?</div>'
+    + '<div class="child">' + offLargeCompany() + offMidCompany() + offSmallCompany() + '</div>'
+    + '</div>'
+    + offPathB()
+    + '</div>'
+    + treeTopClose();
+  scrollToActive();
+}
+
+function q4_linkedin() { activeMod = null; showQ5("LinkedIn Job Board"); }
+function q4_feed() { activeMod = "m15"; showQ5("LinkedIn Feed (someone posted)"); }
+function q4_other() { activeMod = null; showQ5("Other Job Board"); }
+function q4_event() { activeMod = "m16"; showQ5("Career Fair, Event, or In Person"); }
+
+function q4_recruiter() {
+  activeMod = null;
+  B.innerHTML = treeTop("Yes", "showQ3()")
+    + '<div class="child">'
+    + doneNodeWithChoice("Q4", "How did you find this job posting?", "A recruiter messaged me", "showQ4()")
+    + '<div class="child">'
+    + modBoxOff()
+    + endNodeActive("END C", "A Recruiter Messaged You", "Respond within 24 hours. Express genuine interest and ask thoughtful questions about the role. They have already identified you as a potential fit. Be responsive, be curious, and ask about the role, team, and timeline. Do not immediately ask about salary in the first message.")
+    + '<div class="node q-off">Q5: What is the company size?</div>'
+    + '<div class="child">' + offLargeCompany() + offMidCompany() + offSmallCompany() + '</div>'
+    + '</div>'
+    + offPathB()
+    + '</div>'
+    + treeTopClose()
+    + startOverBtn();
+  scrollToActive();
+}
+
+// Store Q4 choice label for done nodes
+var q4Label = "";
+
+
+// ============================================================
+// Q5: What is the company size?
+// ============================================================
+function showQ5(q4choice) {
+  q4Label = q4choice;
+  var btns = '<button class="opt" onclick="q5_large()">Large (1,000+)</button>'
+    + '<button class="opt" onclick="q5_mid()">Mid sized (100 to 999)</button>'
+    + '<button class="opt" onclick="q5_small()">Small or startup (under 100)</button>';
+
+  B.innerHTML = treeTop("Yes", "showQ3()")
+    + '<div class="child">'
+    + doneNodeWithChoice("Q4", "How did you find this job posting?", q4Label, "showQ4()")
+    + '<div class="child">'
+    + modBox()
+    + endNodeOff("END C: A Recruiter Messaged You")
+    + activeNode("Q5", "What is the company size?", btns)
+    + '<div class="child">' + offLargeCompany() + offMidCompany() + offSmallCompany() + '</div>'
+    + '</div>'
+    + offPathB()
+    + '</div>'
+    + treeTopClose();
+  scrollToActive();
+}
+
+function q5_large() { companySize = "large"; showQ6(); }
+function q5_mid() { companySize = "mid"; showQ7(); }
+function q5_small() { companySize = "small"; showQ8(); }
+
+// Helper: Q4+Q5 done prefix
+function doneQ4Q5(q5choice, q5goback) {
+  return treeTop("Yes", "showQ3()")
+    + '<div class="child">'
+    + doneNodeWithChoice("Q4", "How did you find this job posting?", q4Label, "showQ4()")
+    + '<div class="child">'
+    + modBox()
+    + endNodeOff("END C: A Recruiter Messaged You")
+    + doneNodeWithChoice("Q5", "What is the company size?", q5choice, q5goback)
+    + '<div class="child">';
+}
+
+function doneQ4Q5Close() {
+  return '</div></div>' + offPathB() + '</div>' + treeTopClose();
+}
+
+function showQ5Again() {
+  showQ5(q4Label);
+}
+
+
+// ============================================================
+// Q6: Do you know anyone at this large company?
+// ============================================================
+function showQ6() {
+  var btns = '<button class="opt" onclick="q6_yes()">Yes</button>'
+    + '<button class="opt" onclick="q6_no()">No</button>';
+
+  B.innerHTML = doneQ4Q5("Large (1,000+)", "showQ5Again()")
+    + activeNode("Q6", "Do you know anyone who works at this large company?", btns)
+    + '<div class="child">' + offWarmBranch() + offColdLarge() + '</div>'
+    + offMidCompany()
+    + offSmallCompany()
+    + doneQ4Q5Close();
+  scrollToActive();
+}
+
+function q6_yes() { showQ9_large(); }
+function q6_no() { showQ12(); }
+
+
+// ============================================================
+// Q7: Do you know anyone at this mid sized company?
+// ============================================================
+function showQ7() {
+  var btns = '<button class="opt" onclick="q7_yes()">Yes</button>'
+    + '<button class="opt" onclick="q7_no()">No</button>';
+
+  B.innerHTML = doneQ4Q5("Mid sized (100 to 999)", "showQ5Again()")
+    + offLargeCompany()
+    + activeNode("Q7", "Do you know anyone who works at this mid sized company?", btns)
+    + '<div class="child">' + offWarmBranch() + offColdMid() + '</div>'
+    + offSmallCompany()
+    + doneQ4Q5Close();
+  scrollToActive();
+}
+
+function q7_yes() { showQ9_mid(); }
+function q7_no() { showQ13(); }
+
+
+// ============================================================
+// Q8: Do you know anyone at this small company?
+// ============================================================
+function showQ8() {
+  var btns = '<button class="opt" onclick="q8_yes()">Yes</button>'
+    + '<button class="opt" onclick="q8_no()">No</button>';
+
+  B.innerHTML = doneQ4Q5("Small or startup (under 100)", "showQ5Again()")
+    + offLargeCompany()
+    + offMidCompany()
+    + activeNode("Q8", "Do you know anyone who works at this small company?", btns)
+    + '<div class="child">' + offWarmBranch() + offColdSmall() + '</div>'
+    + doneQ4Q5Close();
+  scrollToActive();
+}
+
+function q8_yes() { showQ9_small(); }
+function q8_no() { showQ14(); }
+
+
+// ============================================================
+// Q9: Are you on good terms with this person?
+// (3 variants: large, mid, small)
+// ============================================================
+function showQ9_large() {
+  var btns = '<button class="opt" onclick="q9_yes_large()">Yes, or good enough</button>'
+    + '<button class="opt" onclick="q9_no_large()">No, it is complicated</button>';
+
+  B.innerHTML = doneQ4Q5("Large (1,000+)", "showQ5Again()")
+    + doneNodeWithChoice("Q6", "Do you know anyone who works at this large company?", "Yes", "showQ6()")
+    + '<div class="child">'
+    + activeNode("Q9", "Are you on good terms with this person?", btns)
+    + '<div class="child">'
+    + '<div class="node q-off">Q10: Can you get a referral within 1 to 2 days?</div>'
+    + '<div class="child"><div class="node q-off">END D</div><div class="node q-off">Q11: How recently was the job posted?</div><div class="child"><div class="node q-off">END E</div><div class="node q-off">END F</div></div></div>'
+    + '</div>'
+    + offColdLarge()
+    + '</div>'
+    + offMidCompany() + offSmallCompany()
+    + doneQ4Q5Close();
+  scrollToActive();
+}
+
+function showQ9_mid() {
+  var btns = '<button class="opt" onclick="q9_yes_mid()">Yes, or good enough</button>'
+    + '<button class="opt" onclick="q9_no_mid()">No, it is complicated</button>';
+
+  B.innerHTML = doneQ4Q5("Mid sized (100 to 999)", "showQ5Again()")
+    + offLargeCompany()
+    + doneNodeWithChoice("Q7", "Do you know anyone who works at this mid sized company?", "Yes", "showQ7()")
+    + '<div class="child">'
+    + activeNode("Q9", "Are you on good terms with this person?", btns)
+    + '<div class="child">'
+    + '<div class="node q-off">Q10: Can you get a referral within 1 to 2 days?</div>'
+    + '<div class="child"><div class="node q-off">END D</div><div class="node q-off">Q11: How recently was the job posted?</div><div class="child"><div class="node q-off">END E</div><div class="node q-off">END F</div></div></div>'
+    + '</div>'
+    + offColdMid()
+    + '</div>'
+    + offSmallCompany()
+    + doneQ4Q5Close();
+  scrollToActive();
+}
+
+function showQ9_small() {
+  var btns = '<button class="opt" onclick="q9_yes_small()">Yes, or good enough</button>'
+    + '<button class="opt" onclick="q9_no_small()">No, it is complicated</button>';
+
+  B.innerHTML = doneQ4Q5("Small or startup (under 100)", "showQ5Again()")
+    + offLargeCompany()
+    + offMidCompany()
+    + doneNodeWithChoice("Q8", "Do you know anyone who works at this small company?", "Yes", "showQ8()")
+    + '<div class="child">'
+    + activeNode("Q9", "Are you on good terms with this person?", btns)
+    + '<div class="child">'
+    + '<div class="node q-off">Q10: Can you get a referral within 1 to 2 days?</div>'
+    + '<div class="child"><div class="node q-off">END D</div><div class="node q-off">Q11: How recently was the job posted?</div><div class="child"><div class="node q-off">END E</div><div class="node q-off">END F</div></div></div>'
+    + '</div>'
+    + offColdSmall()
+    + '</div>'
+    + doneQ4Q5Close();
+  scrollToActive();
+}
+
+function q9_yes_large() { showQ10("large"); }
+function q9_yes_mid() { showQ10("mid"); }
+function q9_yes_small() { showQ10("small"); }
+function q9_no_large() { showQ12(); }
+function q9_no_mid() { showQ13(); }
+function q9_no_small() { showQ14(); }
+
+
+// ============================================================
+// Q10: Can you get a referral within 1 to 2 days?
+// ============================================================
+function showQ10(size) {
+  var q9goback = "showQ9_" + size + "()";
+
+  var btns = '<button class="opt" onclick="q10_yes_' + size + '()">Yes</button>'
+    + '<button class="opt" onclick="q10_no_' + size + '()">No, or not sure</button>';
+
+  B.innerHTML = doneQ4Q5(sizeLabel(size), "showQ5Again()")
+    + beforeCompany(size)
+    + doneNodeWithChoice(sizeQNum(size), sizeQText(size), "Yes", sizeGoback(size))
+    + '<div class="child">'
+    + doneNodeWithChoice("Q9", "Are you on good terms with this person?", "Yes, or good enough", q9goback)
+    + '<div class="child">'
+    + activeNode("Q10", "Can you get a referral within 1 to 2 days?", btns)
+    + '<div class="child">'
+    + endNodeOff("END D: Ask for a Referral")
+    + '<div class="node q-off">Q11: How recently was the job posted?</div>'
+    + '<div class="child"><div class="node q-off">END E</div><div class="node q-off">END F</div></div>'
+    + '</div>'
+    + '</div>'
+    + coldOff(size)
+    + '</div>'
+    + afterCompanyClose(size)
+    + doneQ4Q5Close();
+  scrollToActive();
+}
+
+function q10_yes_large() { showEndD("large"); }
+function q10_yes_mid() { showEndD("mid"); }
+function q10_yes_small() { showEndD("small"); }
+function q10_no_large() { showQ11("large"); }
+function q10_no_mid() { showQ11("mid"); }
+function q10_no_small() { showQ11("small"); }
+
+
+// ============================================================
+// HELPER: warm branch done prefix (Q9 done, Q10 done)
+// ============================================================
+function warmDonePrefix(size, q10choice) {
+  var q9goback = "showQ9_" + size + "()";
+  var q10goback = "showQ10('" + size + "')";
+
+  return doneQ4Q5(sizeLabel(size), "showQ5Again()")
+    + beforeCompany(size)
+    + doneNodeWithChoice(sizeQNum(size), sizeQText(size), "Yes", sizeGoback(size))
+    + '<div class="child">'
+    + doneNodeWithChoice("Q9", "Are you on good terms with this person?", "Yes, or good enough", q9goback)
+    + '<div class="child">'
+    + doneNodeWithChoice("Q10", "Can you get a referral within 1 to 2 days?", q10choice, q10goback)
+    + '<div class="child">';
+}
+
+function warmDoneSuffix(size) {
+  return '</div></div>'
+    + coldOff(size)
+    + '</div>'
+    + afterCompanyClose(size)
+    + doneQ4Q5Close();
+}
+
+
+// ============================================================
+// END D: Ask for a Referral
+// ============================================================
+function showEndD(size) {
+  B.innerHTML = warmDonePrefix(size, "Yes")
+    + endNodeActive("END D", "Ask for a Referral", "Reach out to your contact and ask for a referral. This is the strongest networking move. Send them the job link and ask if they think you'd be a good fit. Make it easy for them. Thank them regardless of outcome.")
+    + '<div class="node q-off">Q11: How recently was the job posted?</div>'
+    + '<div class="child"><div class="node q-off">END E</div><div class="node q-off">END F</div></div>'
+    + warmDoneSuffix(size)
+    + startOverBtn();
+  scrollToActive();
+}
+
+
+// ============================================================
+// Q11: How recently was the job posted?
+// ============================================================
+function showQ11(size) {
+  var btns = '<button class="opt" onclick="q11_recent_' + size + '()">Within roughly 3 days</button>'
+    + '<button class="opt" onclick="q11_old_' + size + '()">Older than 3 days, or not sure</button>';
+
+  B.innerHTML = warmDonePrefix(size, "No, or not sure")
+    + endNodeOff("END D: Ask for a Referral")
+    + activeNode("Q11", "How recently was the job posted?", btns)
+    + '<div class="child"><div class="node q-off">END E</div><div class="node q-off">END F</div></div>'
+    + warmDoneSuffix(size);
+  scrollToActive();
+}
+
+function q11_recent_large() { showEndE("large"); }
+function q11_recent_mid() { showEndE("mid"); }
+function q11_recent_small() { showEndE("small"); }
+function q11_old_large() { showEndF("large"); }
+function q11_old_mid() { showEndF("mid"); }
+function q11_old_small() { showEndF("small"); }
+
+function warmDonePrefixQ11(size, q11choice) {
+  var q11goback = "showQ11('" + size + "')";
+  return warmDonePrefix(size, "No, or not sure")
+    + endNodeOff("END D: Ask for a Referral")
+    + doneNodeWithChoice("Q11", "How recently was the job posted?", q11choice, q11goback)
+    + '<div class="child">';
+}
+
+function warmDoneSuffixQ11(size) {
+  return '</div>' + warmDoneSuffix(size);
+}
+
+
+// ============================================================
+// END E: Ask for Referral AND Apply Now
+// ============================================================
+function showEndE(size) {
+  B.innerHTML = warmDonePrefixQ11(size, "Within roughly 3 days")
+    + endNodeActive("END E", "Ask for Referral AND Apply Now", "Reach out to your contact to ask for a referral, but ALSO apply for the position now. Do not wait for the referral. Applying ensures you are in the system while the referral processes. Some recruiters can retroactively flag an application with a referral. Let your contact know you already applied so they can flag it if possible.")
+    + endNodeOff("END F")
+    + warmDoneSuffixQ11(size)
+    + startOverBtn();
+  scrollToActive();
+}
+
+
+// ============================================================
+// END F: Apply Now AND Contact a Recruiter
+// ============================================================
+function showEndF(size) {
+  B.innerHTML = warmDonePrefixQ11(size, "Older than 3 days, or not sure")
+    + endNodeOff("END E")
+    + endNodeActive("END F", "Apply Now AND Contact a Recruiter", "Apply for the position immediately AND reach out to a recruiter at the company about it. The posting is older, so the candidate pool may be filling up. Recruiters are more likely to be able to retroactively flag an application. Also ask your contact for the referral as a backup, but do not wait on it.")
+    + warmDoneSuffixQ11(size)
+    + startOverBtn();
+  scrollToActive();
+}
+
+
+// ============================================================
+// COLD NETWORKING HELPERS
+// ============================================================
+function coldDonePrefix(size) {
+  return doneQ4Q5(sizeLabel(size), "showQ5Again()")
+    + beforeCompany(size)
+    + doneNodeWithChoice(sizeQNum(size), sizeQText(size), "No", sizeGoback(size))
+    + '<div class="child">'
+    + offWarmBranch();
+}
+
+function coldDoneSuffix(size) {
+  return '</div>'
+    + afterCompanyClose(size)
+    + doneQ4Q5Close();
+}
+
+
+// ============================================================
+// Q12: Large company cold networking
+// ============================================================
+function showQ12() {
+  companySize = "large";
+  var btns = '<button class="opt" onclick="q12_recruiter()">Find a recruiter</button>'
+    + '<button class="opt" onclick="q12_hm()">Find the hiring manager</button>'
+    + '<button class="opt" onclick="q12_similar()">Employee in a similar role</button>'
+    + '<button class="opt" onclick="q12_any()">Any employee (referral bonus)</button>'
+    + '<button class="opt" onclick="q12_notsure()">Not sure where to start</button>';
+
+  B.innerHTML = coldDonePrefix("large")
+    + activeNodeWithCtx("Q12", "At a large company, who do you want to reach out to?", "Large companies get high volume quickly. Multiple recruiters likely exist. Referral bonuses are common.", btns)
+    + '<div class="child">'
+    + offRecruiterBranch()
+    + endNodeOff("END G") + endNodeOff("END H") + endNodeOff("END I") + endNodeOff("END J")
+    + '</div>'
+    + coldDoneSuffix("large");
+  scrollToActive();
+}
+
+function q12_recruiter() { showQ17("large"); }
+function q12_hm() { showColdEnd("large", "Q12", "Find the hiring manager", "showQ12()", "END G", "Hiring Manager (Large Company)", "Find the likely hiring manager on LinkedIn (search for the team lead or manager of the relevant department) and send a concise, specific message. Reference the specific role. Ask a genuine question about the role or team. Do not attach your resume unsolicited in the first message. Keep it to 3 to 4 sentences."); }
+function q12_similar() { showColdEnd("large", "Q12", "Employee in a similar role", "showQ12()", "END H", "Employee in Similar Role (Large Company)", "Connect with someone who works a similar position as the one you are applying for. Frame it as wanting to learn about the team, not as asking for a favor. Prepare 2 to 3 specific questions. If the conversation goes well, they may offer to refer you without you asking. Do not immediately ask for a referral."); }
+function q12_any() { showColdEnd("large", "Q12", "Any employee (referral bonus)", "showQ12()", "END I", "Any Employee / Referral Bonus (Large Company)", "At large companies that offer referral bonuses, even employees in completely different departments may be willing to refer you. Reach out, be upfront about the role you are interested in, and make it easy by sending the job link and your resume."); }
+function q12_notsure() { showColdEnd("large", "Q12", "Not sure where to start", "showQ12()", "END J", "Not Sure (Large Company)", "Apply first, then find a recruiter and send a message referencing your application. Apply, then find recruiter, then send message, in that order. Mention the job title or ID specifically. Keep the message to 3 to 4 sentences. If you cannot find a recruiter, try the hiring manager."); }
+
+
+// ============================================================
+// Q13: Mid sized company cold networking
+// ============================================================
+function showQ13() {
+  companySize = "mid";
+  var btns = '<button class="opt" onclick="q13_recruiter()">Find a recruiter</button>'
+    + '<button class="opt" onclick="q13_hm()">Find the hiring manager</button>'
+    + '<button class="opt" onclick="q13_similar()">Employee in a similar role</button>'
+    + '<button class="opt" onclick="q13_any()">Any employee willing to refer</button>'
+    + '<button class="opt" onclick="q13_notsure()">Not sure where to start</button>';
+
+  B.innerHTML = coldDonePrefix("mid")
+    + activeNodeWithCtx("Q13", "At a mid sized company, who do you want to reach out to?", "Fewer layers than large companies. Hiring managers are more accessible. Employees posting about roles may be hiring managers.", btns)
+    + '<div class="child">'
+    + offRecruiterBranch()
+    + endNodeOff("END K") + endNodeOff("END L") + endNodeOff("END M") + endNodeOff("END N")
+    + '</div>'
+    + coldDoneSuffix("mid");
+  scrollToActive();
+}
+
+function q13_recruiter() { showQ17("mid"); }
+function q13_hm() { showColdEnd("mid", "Q13", "Find the hiring manager", "showQ13()", "END K", "Hiring Manager (Mid Sized Company)", "Mid sized companies have fewer layers. Hiring managers are more accessible and may be reviewing applications directly. A thoughtful, specific message can move you to the top of the pile. Check if employees are posting about open roles on LinkedIn, as they might be hiring managers."); }
+function q13_similar() { showColdEnd("mid", "Q13", "Employee in a similar role", "showQ13()", "END L", "Employee in Similar Role (Mid Sized Company)", "At mid sized companies, employee referrals carry significant weight. Building a connection with someone on the team can naturally lead to a referral. Show curiosity about the role and how it aligns with your background."); }
+function q13_any() { showColdEnd("mid", "Q13", "Any employee willing to refer", "showQ13()", "END M", "Any Employee Willing to Refer (Mid Sized Company)", "Some companies offer referral bonuses, so even someone in a different department may be happy to refer you. Be upfront about the role you are interested in. Make it easy by sending the job link or referencing the role by the exact title."); }
+function q13_notsure() { showColdEnd("mid", "Q13", "Not sure where to start", "showQ13()", "END N", "Not Sure (Mid Sized Company)", "Apply to the position AND reach out to a recruiter or hiring manager at the same time. Mid sized companies get fewer applications than large ones but still enough that you want to stand out. A dual approach can work well."); }
+
+
+// ============================================================
+// Q14: Small company cold networking
+// ============================================================
+function showQ14() {
+  companySize = "small";
+  var btns = '<button class="opt" onclick="q14_recruiter()">They have a recruiter</button>'
+    + '<button class="opt" onclick="q14_anyone()">Reach out to anyone</button>'
+    + '<button class="opt" onclick="q14_notsure()">Not sure where to start</button>';
+
+  B.innerHTML = coldDonePrefix("small")
+    + activeNodeWithCtx("Q14", "At a small company, who do you want to reach out to?", "Everyone knows everyone. Any single connection is highly effective. Recruiter may not exist or is wearing many hats.", btns)
+    + '<div class="child">'
+    + endNodeOff("END O") + endNodeOff("END P") + endNodeOff("END Q")
+    + '</div>'
+    + coldDoneSuffix("small");
+  scrollToActive();
+}
+
+function q14_recruiter() { showColdEnd("small", "Q14", "They have a recruiter", "showQ14()", "END O", "Recruiter (Small Company)", "Reach out to the recruiter, but keep in mind they are likely wearing many hats. Be concise and respectful of their time. They are likely to know the hiring manager. Keep it short."); }
+function q14_anyone() { showColdEnd("small", "Q14", "Reach out to anyone", "showQ14()", "END P", "Anyone (Small Company)", "At small companies, reach out to anyone you can find. Any employee can likely walk your resume to the right person. Show genuine interest in the company and their product or mission. If you can find the founder, a thoughtful message can work wonders. Do not be generic. Small companies want people who specifically want them."); }
+function q14_notsure() { showColdEnd("small", "Q14", "Not sure where to start", "showQ14()", "END Q", "Not Sure (Small Company)", "Apply and reach out to anyone you can find at the company. Small companies have smaller candidate pools and fewer formal processes. A personal touch goes a very long way. Check the company About page or LinkedIn for team members."); }
+
+
+// ============================================================
+// Generic cold end display
+// ============================================================
+function showColdEnd(size, qLabel, choiceLabel, gobackFn, endLabel, endTitle, endBody) {
+  B.innerHTML = coldDonePrefix(size)
+    + doneNodeWithChoice(qLabel, qLabel === "Q12" ? "At a large company, who do you want to reach out to?" : (qLabel === "Q13" ? "At a mid sized company, who do you want to reach out to?" : "At a small company, who do you want to reach out to?"), choiceLabel, gobackFn)
+    + '<div class="child">'
+    + offRecruiterBranch()
+    + endNodeActive(endLabel, endTitle, endBody)
+    + '</div>'
+    + coldDoneSuffix(size)
+    + startOverBtn();
+  scrollToActive();
+}
+
+
+// ============================================================
+// Q17: What kind of role are you looking for?
+// ============================================================
+function showQ17(size) {
+  var parentGoback = coldParentGoback(size);
+  var parentLabel = coldParentLabel(size);
+  var parentText = coldParentText(size);
+
+  var btns = '<button class="opt" onclick="q17_pick(\'' + size + '\')">Technical (Engineering, Data, IT)</button>'
+    + '<button class="opt" onclick="q17_pick(\'' + size + '\')">Non-technical (Marketing, Sales, Ops)</button>'
+    + '<button class="opt" onclick="q17_pick(\'' + size + '\')">Executive or senior leadership</button>'
+    + '<button class="opt" onclick="q17_pick(\'' + size + '\')">Entry level or internship</button>';
+
+  B.innerHTML = coldDonePrefix(size)
+    + doneNodeWithChoice(parentLabel, parentText, "Find a recruiter", parentGoback)
+    + '<div class="child">'
+    + activeNodeWithCtx("Q17", "What kind of role are you looking for?", "Different recruiters specialize in different areas. This helps you find the right type.", btns)
+    + '<div class="child">'
+    + '<div class="node q-off">Q18: Recruiter commonality?</div>'
+    + '<div class="child"><div class="node q-off">END R</div><div class="node q-off">END S</div>'
+    + '<div class="node q-off">Q19: Is this recruiter active?</div>'
+    + '<div class="child"><div class="node q-off">END U</div><div class="node q-off">END V</div><div class="node q-off">END W</div></div>'
+    + '<div class="node q-off">END T</div></div>'
+    + '</div>'
+    + coldEndOffs(size)
+    + '</div>'
+    + coldDoneSuffix(size);
+  scrollToActive();
+}
+
+// All Q17 options go to Q18 (the role type is informational)
+var q17Choice = "";
+function q17_pick(size) {
+  q17Choice = "Selected";
+  showQ18(size);
+}
+
+
+// ============================================================
+// Q18: Can you find a recruiter you share something in common with?
+// ============================================================
+function showQ18(size) {
+  var q17goback = "showQ17('" + size + "')";
+  var parentGoback = coldParentGoback(size);
+  var parentLabel = coldParentLabel(size);
+  var parentText = coldParentText(size);
+
+  var btns = '<button class="opt" onclick="q18_strong(\'' + size + '\')">Yes, strong commonality</button>'
+    + '<button class="opt" onclick="q18_minor(\'' + size + '\')">Yes, minor commonality</button>'
+    + '<button class="opt" onclick="q18_none(\'' + size + '\')">No, nothing obvious</button>'
+    + '<button class="opt" onclick="q18_cant(\'' + size + '\')">Cannot find a recruiter at all</button>';
+
+  B.innerHTML = coldDonePrefix(size)
+    + doneNodeWithChoice(parentLabel, parentText, "Find a recruiter", parentGoback)
+    + '<div class="child">'
+    + doneNodeWithChoice("Q17", "What kind of role are you looking for?", q17Choice, q17goback)
+    + '<div class="child">'
+    + activeNodeWithCtx("Q18", "Can you find a recruiter you share something in common with?", "Mutual connections, same school, same previous company, similar interests. Even if the recruiter is not in the exact field you are targeting, strong personal commonalities can make it worth reaching out.", btns)
+    + '<div class="child">'
+    + endNodeOff("END R") + endNodeOff("END S")
+    + '<div class="node q-off">Q19: Is this recruiter active?</div>'
+    + '<div class="child"><div class="node q-off">END U</div><div class="node q-off">END V</div><div class="node q-off">END W</div></div>'
+    + endNodeOff("END T")
+    + '</div>'
+    + '</div>'
+    + coldEndOffs(size)
+    + '</div>'
+    + coldDoneSuffix(size);
+  scrollToActive();
+}
+
+function recruiterEndHelper(size, q18choice, endLabel, endTitle, endBody) {
+  var q18goback = "showQ18('" + size + "')";
+  var q17goback = "showQ17('" + size + "')";
+  var parentGoback = coldParentGoback(size);
+  var parentLabel = coldParentLabel(size);
+  var parentText = coldParentText(size);
+
+  B.innerHTML = coldDonePrefix(size)
+    + doneNodeWithChoice(parentLabel, parentText, "Find a recruiter", parentGoback)
+    + '<div class="child">'
+    + doneNodeWithChoice("Q17", "What kind of role are you looking for?", q17Choice, q17goback)
+    + '<div class="child">'
+    + doneNodeWithChoice("Q18", "Can you find a recruiter you share something in common with?", q18choice, q18goback)
+    + '<div class="child">'
+    + endNodeActive(endLabel, endTitle, endBody)
+    + '</div>'
+    + '</div>'
+    + coldEndOffs(size)
+    + '</div>'
+    + coldDoneSuffix(size)
+    + startOverBtn();
+  scrollToActive();
+}
+
+function q18_strong(size) { recruiterEndHelper(size, "Yes, strong commonality", "END R", "Recruiter with Strong Commonality", "Lead with the commonality in your very first sentence. The ask (the role) comes second, after the personal connection. This turns a cold outreach into a warm one."); }
+function q18_minor(size) { recruiterEndHelper(size, "Yes, minor commonality", "END S", "Recruiter with Minor Commonality", "Mention the commonality briefly, then get to the point about the role. Even a small commonality is better than none. Keep the message to 2 to 3 sentences."); }
+function q18_cant(size) { recruiterEndHelper(size, "Cannot find a recruiter at all", "END T", "Cannot Find a Recruiter", "Not all companies have visible recruiters on LinkedIn. Try searching the company name plus recruiter or talent acquisition. If that fails, pivot to the hiring manager or any team member. Go back and pick a different option."); }
+
+function q18_none(size) { showQ19(size); }
+
+
+// ============================================================
+// Q19: Is this recruiter active on LinkedIn?
+// ============================================================
+function showQ19(size) {
+  var q18goback = "showQ18('" + size + "')";
+  var q17goback = "showQ17('" + size + "')";
+  var parentGoback = coldParentGoback(size);
+  var parentLabel = coldParentLabel(size);
+  var parentText = coldParentText(size);
+
+  var btns = '<button class="opt" onclick="q19_active(\'' + size + '\')">Yes, active</button>'
+    + '<button class="opt" onclick="q19_semi(\'' + size + '\')">Somewhat active</button>'
+    + '<button class="opt" onclick="q19_ghost(\'' + size + '\')">No, seemingly inactive profile</button>';
+
+  B.innerHTML = coldDonePrefix(size)
+    + doneNodeWithChoice(parentLabel, parentText, "Find a recruiter", parentGoback)
+    + '<div class="child">'
+    + doneNodeWithChoice("Q17", "What kind of role are you looking for?", q17Choice, q17goback)
+    + '<div class="child">'
+    + doneNodeWithChoice("Q18", "Can you find a recruiter you share something in common with?", "No, nothing obvious", q18goback)
+    + '<div class="child">'
+    + endNodeOff("END R") + endNodeOff("END S")
+    + activeNodeWithCtx("Q19", "Is this recruiter active on LinkedIn?", "Do they post, comment, have 100+ connections?", btns)
+    + '<div class="child"><div class="node q-off">END U</div><div class="node q-off">END V</div><div class="node q-off">END W</div></div>'
+    + endNodeOff("END T")
+    + '</div>'
+    + '</div>'
+    + coldEndOffs(size)
+    + '</div>'
+    + coldDoneSuffix(size);
+  scrollToActive();
+}
+
+function q19EndHelper(size, q19choice, endLabel, endTitle, endBody) {
+  var q19goback = "showQ19('" + size + "')";
+  var q18goback = "showQ18('" + size + "')";
+  var q17goback = "showQ17('" + size + "')";
+  var parentGoback = coldParentGoback(size);
+  var parentLabel = coldParentLabel(size);
+  var parentText = coldParentText(size);
+
+  B.innerHTML = coldDonePrefix(size)
+    + doneNodeWithChoice(parentLabel, parentText, "Find a recruiter", parentGoback)
+    + '<div class="child">'
+    + doneNodeWithChoice("Q17", "What kind of role are you looking for?", q17Choice, q17goback)
+    + '<div class="child">'
+    + doneNodeWithChoice("Q18", "Can you find a recruiter you share something in common with?", "No, nothing obvious", q18goback)
+    + '<div class="child">'
+    + endNodeOff("END R") + endNodeOff("END S")
+    + doneNodeWithChoice("Q19", "Is this recruiter active on LinkedIn?", q19choice, q19goback)
+    + '<div class="child">'
+    + endNodeActive(endLabel, endTitle, endBody)
+    + '</div>'
+    + endNodeOff("END T")
+    + '</div>'
+    + '</div>'
+    + coldEndOffs(size)
+    + '</div>'
+    + coldDoneSuffix(size)
+    + startOverBtn();
+  scrollToActive();
+}
+
+function q19_active(size) { q19EndHelper(size, "Yes, active", "END U", "Active Recruiter", "Send a direct, concise connection request. You can wait for engagement opportunities or refer to them in the message if you aren't in a huge rush. Be direct, keep it specific. Help them help you."); }
+function q19_semi(size) { q19EndHelper(size, "Somewhat active", "END V", "Semi-Active Recruiter", "Send a direct, concise connection request. Do not wait for engagement opportunities. Semi-active recruiters may not post often but still check their messages. Be direct, keep it specific, mention the role by name."); }
+function q19_ghost(size) { q19EndHelper(size, "No, inactive profile", "END W", "'Inactive' Recruiter", "Send the connection request anyway (it costs you nothing), but do not rely on it. Find a backup contact: a hiring manager, a team member, or a different recruiter. Do not put all your eggs in one basket with an inactive profile."); }
+
+
+// ============================================================
+// PATH B: NO SPECIFIC JOB
+// ============================================================
+
+// Helper: Q3 done with "No" + off path A
+function pathBPrefix() {
+  return treeTop("No", "showQ3()")
+    + '<div class="child">'
+    + offPathA();
+}
+
+function pathBSuffix() {
+  return '</div>' + treeTopClose();
+}
+
+
+// ============================================================
+// Q30: Is there a specific company?
+// ============================================================
+function showQ30() {
+  var btns = '<button class="opt" onclick="q30_yes()">Yes</button>'
+    + '<button class="opt" onclick="q30_no()">No</button>';
+
+  B.innerHTML = pathBPrefix()
+    + activeNode("Q30", "Is there a specific company you are interested in?", btns)
+    + '<div class="child">'
+    + '<div class="node q-off">Q31: When would you like to work at this company?</div>'
+    + '<div class="child">'
+    + '<div class="node q-off">Q32: What is the company size?</div>'
+    + '<div class="child"><div class="node q-off">END X</div><div class="node q-off">END Y</div><div class="node q-off">END Z</div></div>'
+    + '<div class="node q-off">Q35: What is the company size?</div>'
+    + '<div class="child"><div class="node q-off">END AA</div><div class="node q-off">END BB</div><div class="node q-off">END CC</div></div>'
+    + '</div>'
+    + '<div class="node q-off">Q40: What kind of networking are you looking for?</div>'
+    + '<div class="child"><div class="node q-off">END DD</div><div class="node q-off">END EE</div><div class="node q-off">END FF</div><div class="node q-off">END GG</div><div class="node q-off">END HH</div></div>'
+    + '</div>'
+    + pathBSuffix();
+  scrollToActive();
+}
+
+function q30_yes() { showQ31(); }
+function q30_no() { showQ40(); }
+
+
+// ============================================================
+// Q31: When would you like to work at this company?
+// ============================================================
+function showQ31() {
+  var btns = '<button class="opt" onclick="q31_asap()">As soon as possible</button>'
+    + '<button class="opt" onclick="q31_future()">Sometime in the future</button>';
+
+  B.innerHTML = pathBPrefix()
+    + doneNodeWithChoice("Q30", "Is there a specific company you are interested in?", "Yes", "showQ30()")
+    + '<div class="child">'
+    + activeNode("Q31", "When would you like to work at this company?", btns)
+    + '<div class="child">'
+    + '<div class="node q-off">Q32: What is the company size?</div>'
+    + '<div class="child"><div class="node q-off">END X</div><div class="node q-off">END Y</div><div class="node q-off">END Z</div></div>'
+    + '<div class="node q-off">Q35: What is the company size?</div>'
+    + '<div class="child"><div class="node q-off">END AA</div><div class="node q-off">END BB</div><div class="node q-off">END CC</div></div>'
+    + '</div>'
+    + '<div class="node q-off">Q40: What kind of networking are you looking for?</div>'
+    + '<div class="child"><div class="node q-off">END DD</div><div class="node q-off">END EE</div><div class="node q-off">END FF</div><div class="node q-off">END GG</div><div class="node q-off">END HH</div></div>'
+    + '</div>'
+    + pathBSuffix();
+  scrollToActive();
+}
+
+function q31_asap() { showQ32(); }
+function q31_future() { showQ35(); }
+
+
+// ============================================================
+// Q32: Company size (ASAP)
+// ============================================================
+function showQ32() {
+  var btns = '<button class="opt" onclick="q32_large()">Large</button>'
+    + '<button class="opt" onclick="q32_mid()">Mid sized</button>'
+    + '<button class="opt" onclick="q32_small()">Small or startup</button>';
+
+  B.innerHTML = pathBPrefix()
+    + doneNodeWithChoice("Q30", "Is there a specific company you are interested in?", "Yes", "showQ30()")
+    + '<div class="child">'
+    + doneNodeWithChoice("Q31", "When would you like to work at this company?", "As soon as possible", "showQ31()")
+    + '<div class="child">'
+    + activeNode("Q32", "What is the company size?", btns)
+    + '<div class="child"><div class="node q-off">END X</div><div class="node q-off">END Y</div><div class="node q-off">END Z</div></div>'
+    + '<div class="node q-off">Q35: What is the company size?</div>'
+    + '<div class="child"><div class="node q-off">END AA</div><div class="node q-off">END BB</div><div class="node q-off">END CC</div></div>'
+    + '</div>'
+    + '<div class="node q-off">Q40: What kind of networking are you looking for?</div>'
+    + '<div class="child"><div class="node q-off">END DD</div><div class="node q-off">END EE</div><div class="node q-off">END FF</div><div class="node q-off">END GG</div><div class="node q-off">END HH</div></div>'
+    + '</div>'
+    + pathBSuffix();
+  scrollToActive();
+}
+
+function pathBEndHelper(q31choice, q32or35label, q32or35goback, sizeChoice, endLabel, endTitle, endBody) {
+  B.innerHTML = pathBPrefix()
+    + doneNodeWithChoice("Q30", "Is there a specific company you are interested in?", "Yes", "showQ30()")
+    + '<div class="child">'
+    + doneNodeWithChoice("Q31", "When would you like to work at this company?", q31choice, "showQ31()")
+    + '<div class="child">'
+    + doneNodeWithChoice(q32or35label, "What is the company size?", sizeChoice, q32or35goback)
+    + '<div class="child">'
+    + endNodeActive(endLabel, endTitle, endBody)
+    + '</div>'
+    + '</div>'
+    + '<div class="node q-off">Q40: What kind of networking are you looking for?</div>'
+    + '<div class="child"><div class="node q-off">END DD</div><div class="node q-off">END EE</div><div class="node q-off">END FF</div><div class="node q-off">END GG</div><div class="node q-off">END HH</div></div>'
+    + '</div>'
+    + pathBSuffix()
+    + startOverBtn();
+  scrollToActive();
+}
+
+function q32_large() { pathBEndHelper("As soon as possible", "Q32", "showQ32()", "Large", "END X", "No Job, Large Company, ASAP", "Identify 3 to 5 people to connect with: a recruiter, someone who looks like a hiring manager in your target area, and 1 to 3 employees in your target role. Set up job alerts for the company. Follow the company page. Engage with employee posts. When a role opens, you will already have warm contacts."); }
+function q32_mid() { pathBEndHelper("As soon as possible", "Q32", "showQ32()", "Mid sized", "END Y", "No Job, Mid Sized Company, ASAP", "Connect with a recruiter (if one exists) and 1 to 2 employees in your target area. Mid sized companies have more irregular hiring needs. Getting on a recruiter's radar before a role opens puts you first in line. Bookmark their careers page so you can reach out to recruiters when you see a good fit."); }
+function q32_small() { pathBEndHelper("As soon as possible", "Q32", "showQ32()", "Small or startup", "END Z", "No Job, Small Company, ASAP", "Connect with anyone at the company. Small companies often hire through their network before posting publicly. Being a known quantity is your biggest advantage. Show genuine interest in their product or mission."); }
+
+
+// ============================================================
+// Q35: Company size (Future)
+// ============================================================
+function showQ35() {
+  var btns = '<button class="opt" onclick="q35_large()">Large</button>'
+    + '<button class="opt" onclick="q35_mid()">Mid sized</button>'
+    + '<button class="opt" onclick="q35_small()">Small or startup</button>';
+
+  B.innerHTML = pathBPrefix()
+    + doneNodeWithChoice("Q30", "Is there a specific company you are interested in?", "Yes", "showQ30()")
+    + '<div class="child">'
+    + doneNodeWithChoice("Q31", "When would you like to work at this company?", "Sometime in the future", "showQ31()")
+    + '<div class="child">'
+    + '<div class="node q-off">Q32: What is the company size?</div>'
+    + '<div class="child"><div class="node q-off">END X</div><div class="node q-off">END Y</div><div class="node q-off">END Z</div></div>'
+    + activeNode("Q35", "What is the company size?", btns)
+    + '<div class="child"><div class="node q-off">END AA</div><div class="node q-off">END BB</div><div class="node q-off">END CC</div></div>'
+    + '</div>'
+    + '<div class="node q-off">Q40: What kind of networking are you looking for?</div>'
+    + '<div class="child"><div class="node q-off">END DD</div><div class="node q-off">END EE</div><div class="node q-off">END FF</div><div class="node q-off">END GG</div><div class="node q-off">END HH</div></div>'
+    + '</div>'
+    + pathBSuffix();
+  scrollToActive();
+}
+
+function q35_large() { pathBEndHelper("Sometime in the future", "Q35", "showQ35()", "Large", "END AA", "Long-Term, Large Company", "Build genuine connections over time with no immediate ask. Engage with company and employee posts regularly. Attend their public events or webinars. The messaging should be relaxed and based around your genuine interest in the company. This kind of networking pays off months or years later. Another benefit: if you see a position open and think of someone who is a good fit, you can refer them to your new contact."); }
+function q35_mid() { pathBEndHelper("Sometime in the future", "Q35", "showQ35()", "Mid sized", "END BB", "Long-Term, Mid Sized Company", "Connect with 2 to 3 people and nurture the relationships over time. Check in every few months with a genuine message if there's something genuine to message about. Engage with their LinkedIn posts when you see them. When a role opens, you can reach out warmly instead of cold."); }
+function q35_small() { pathBEndHelper("Sometime in the future", "Q35", "showQ35()", "Small or startup", "END CC", "Long-Term, Small Company", "Find the founder, a leader, or any employee and connect genuinely. At small companies, one strong relationship can open every door. Be genuine, be patient, and show you care about what they are building. If you use their product, mention it specifically."); }
+
+
+// ============================================================
+// Q40: What kind of networking are you looking for?
+// ============================================================
+function showQ40() {
+  var btns = '<button class="opt" onclick="q40_linkedin()">Growing LinkedIn connections</button>'
+    + '<button class="opt" onclick="q40_mentors()">Finding mentors</button>'
+    + '<button class="opt" onclick="q40_events()">Attending events</button>'
+    + '<button class="opt" onclick="q40_all()">All of the above</button>'
+    + '<button class="opt" onclick="q40_active()">Actively searching, no target</button>';
+
+  B.innerHTML = pathBPrefix()
+    + doneNodeWithChoice("Q30", "Is there a specific company you are interested in?", "No", "showQ30()")
+    + '<div class="child">'
+    + '<div class="node q-off">Q31: When would you like to work at this company?</div>'
+    + '<div class="child">'
+    + '<div class="node q-off">Q32: What is the company size?</div>'
+    + '<div class="child"><div class="node q-off">END X</div><div class="node q-off">END Y</div><div class="node q-off">END Z</div></div>'
+    + '<div class="node q-off">Q35: What is the company size?</div>'
+    + '<div class="child"><div class="node q-off">END AA</div><div class="node q-off">END BB</div><div class="node q-off">END CC</div></div>'
+    + '</div>'
+    + activeNode("Q40", "What kind of networking are you looking for?", btns)
+    + '<div class="child"><div class="node q-off">END DD</div><div class="node q-off">END EE</div><div class="node q-off">END FF</div><div class="node q-off">END GG</div><div class="node q-off">END HH</div></div>'
+    + '</div>'
+    + pathBSuffix();
+  scrollToActive();
+}
+
+function q40EndHelper(choice, endLabel, endTitle, endBody) {
+  B.innerHTML = pathBPrefix()
+    + doneNodeWithChoice("Q30", "Is there a specific company you are interested in?", "No", "showQ30()")
+    + '<div class="child">'
+    + '<div class="node q-off">Q31: When would you like to work at this company?</div>'
+    + '<div class="child">'
+    + '<div class="node q-off">Q32: What is the company size?</div>'
+    + '<div class="child"><div class="node q-off">END X</div><div class="node q-off">END Y</div><div class="node q-off">END Z</div></div>'
+    + '<div class="node q-off">Q35: What is the company size?</div>'
+    + '<div class="child"><div class="node q-off">END AA</div><div class="node q-off">END BB</div><div class="node q-off">END CC</div></div>'
+    + '</div>'
+    + doneNodeWithChoice("Q40", "What kind of networking are you looking for?", choice, "showQ40()")
+    + '<div class="child">'
+    + endNodeActive(endLabel, endTitle, endBody)
+    + '</div>'
+    + '</div>'
+    + pathBSuffix()
+    + startOverBtn();
+  scrollToActive();
+}
+
+function q40_linkedin() { q40EndHelper("Growing LinkedIn connections", "END DD", "Grow LinkedIn Connections", "Connect with 5 to 10 people per week in your industry. Personalize every connection request, even briefly. Engage with others' content before requesting a connection. Post or share content 1 to 2 times per week to stay visible. Quality matters more than quantity, but consistency is key."); }
+function q40_mentors() { q40EndHelper("Finding mentors", "END EE", "Find Mentors", 'Identify 2 to 3 people whose career path you admire and reach out with a specific, respectful ask. Do not ask "Will you be my mentor?" That is too big an ask upfront. Instead, ask for a 15 minute conversation (a coffee chat). Prepare 3 to 4 specific questions. Follow up with a thank you and what you learned. Mentorship often develops naturally from repeated conversations.'); }
+function q40_events() { q40EndHelper("Attending events", "END FF", "Attend Events", "Find and attend 1 to 2 industry events per month. Check LinkedIn Events, Eventbrite, and Meetup. Prepare a 30 second intro about yourself. Follow up with everyone you meet within 48 hours. Do not just collect business cards. Have real conversations. Do not skip the follow up, that is where the real networking happens."); }
+function q40_all() { q40EndHelper("All of the above", "END GG", "All of the Above", "Do not try to do everything at once. Start with one action per week. Week 1: Send 5 personalized LinkedIn connection requests. Week 2: Attend one event. Week 3: Reach out to one potential mentor. Week 4: Post or share something on LinkedIn. Repeat and adjust based on what is working. Consistency beats intensity."); }
+function q40_active() { q40EndHelper("Actively searching, no target", "END HH", "Active Search, No Target", "Spend time building your LinkedIn connections and thinking about what industry you want to target. Send out connections or attend networking events to learn more about what you're passionate about. A targeted search is a lot more likely to succeed than an aimless one."); }
+
+
+// ============================================================
+// INIT
+// ============================================================
+showBegin();
+</script>
+
+</body>
+</html>
